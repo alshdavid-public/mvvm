@@ -23,4 +23,26 @@ export interface ViewModelLifecycle {
 }
 export declare function useViewModel<T extends object, U extends Array<unknown>>(ctor: new (...args: U) => T, args: U): T;
 export declare function useReactive<T extends object>(instance: T): T;
+export declare const InjectContext: import("preact").Context<Provider>;
+export declare class Provider extends Map<any, any> {
+    static Provider: import("preact").Provider<Provider>;
+    provide(token: any, value: any): void;
+}
+export declare function useInjectContext(): Provider;
+export declare function useInject<C extends new (...args: any[]) => any>(key: C): InstanceType<C>;
+export declare function useInject<T>(key: any): T;
+interface Unsubscribable {
+    unsubscribe(): void;
+}
+interface Observer<T> {
+    next: (value: T) => void;
+}
+interface Subscribable<T> {
+    subscribe(observer: Observer<T>): Unsubscribable;
+}
+interface BehaviorLike<T> extends Subscribable<T> {
+    getValue(): T;
+}
+export declare function useAsync<T>(x: BehaviorLike<T>): T;
+export declare function useAsync<T>(x: Subscribable<T>, defaultValue: T): T;
 export {};

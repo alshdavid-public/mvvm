@@ -1,4 +1,5 @@
-import { useEffect, useRef, useReducer } from "preact/hooks";
+import { useEffect, useRef, useReducer, useContext, useState } from "preact/hooks";
+import { createContext } from "preact";
 const ON_CHANGE = Symbol("ON_CHANGE");
 export class Reactive {
     #subscriptions = new Set();
@@ -314,4 +315,36 @@ export function useReactive(instance) {
         };
     }, [instance]);
     return instance;
+}
+export const InjectContext = createContext(
+// @ts-expect-error
+null);
+export class Provider extends Map {
+    static Provider = InjectContext.Provider;
+    provide(token, value) {
+        this.set(token, value);
+    }
+}
+export function useInjectContext() {
+    return useContext(InjectContext);
+}
+export function useInject(key) {
+    const target = useContext(InjectContext).get(key);
+    if (!target) {
+        try {
+            throw new Error(`[PROVIDER] Nothing provided for ${key}`);
+        }
+        catch (error) {
+            throw new Error(`[PROVIDER] Nothing provided for |failed to parse|`);
+        }
+    }
+    return target;
+}
+export function useAsync(x, defaultValue) {
+    const [v, setV] = useState(() => "getValue" in x ? x.getValue() : defaultValue);
+    useEffect(() => {
+        const s = x.subscribe({ next: (value) => setV(() => value) });
+        return () => s.unsubscribe();
+    }, [x]);
+    return v;
 }
