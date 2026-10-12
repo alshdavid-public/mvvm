@@ -9,31 +9,13 @@
   "author": "",
   "license": "MIT",
   "type": "module",
+  "main": "./dist/rx.js",
+  "types": "./dist/rx.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "module-sync": "./dist/index.js",
-      "types": "./types/index.d.ts"
-    },
-    "./*": {
-      "import": "./dist/*",
-      "module-sync": "./dist/*",
-      "types": "./types/*"
-    },
-    "./react": {
-      "import": "./dist/react/index.js",
-      "module-sync": "./dist/react/index.js",
-      "types": "./types/react/index.d.ts"
-    },
-    "./preact": {
-      "import": "./dist/preact/index.js",
-      "module-sync": "./dist/preact/index.js",
-      "types": "./types/preact/index.d.ts"
-    },
-    "./forms": {
-      "import": "./dist/forms/index.js",
-      "module-sync": "./dist/forms/index.js",
-      "types": "./types/forms/index.d.ts"
+      "import": "./dist/rx.js",
+      "module-sync": "./dist/rx.js",
+      "types": "./types/rx.d.ts"
     },
     "./package.json": "./package.json"
   },
