@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "",
   "keywords": [],
   "author": "",
@@ -38,15 +38,10 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "npx tsc",
-    "format": "npx prettier ./src/** -w"
+    "build": "rm -rf dist && npx tsc"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
     "preact": "^10.28.3",
-    "prettier": "^3.8.1",
-    "react": "^19.2.4",
-    "rxjs": "^7.8.2",
-    "typescript": "^5.9.3"
+    "typescript": "7"
   }
 }

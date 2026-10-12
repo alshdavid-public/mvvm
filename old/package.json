@@ -1,0 +1,52 @@
+{
+  "name": "mvvm",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.0.5",
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "module-sync": "./dist/index.js",
+      "types": "./types/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*",
+      "module-sync": "./dist/*",
+      "types": "./types/*"
+    },
+    "./react": {
+      "import": "./dist/react/index.js",
+      "module-sync": "./dist/react/index.js",
+      "types": "./types/react/index.d.ts"
+    },
+    "./preact": {
+      "import": "./dist/preact/index.js",
+      "module-sync": "./dist/preact/index.js",
+      "types": "./types/preact/index.d.ts"
+    },
+    "./forms": {
+      "import": "./dist/forms/index.js",
+      "module-sync": "./dist/forms/index.js",
+      "types": "./types/forms/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "format": "npx prettier ./src/** -w"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "preact": "^10.28.3",
+    "prettier": "^3.8.1",
+    "react": "^19.2.4",
+    "rxjs": "^7.8.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -11,9 +11,10 @@
     "rewriteRelativeImportExtensions": true,
     "noUnusedParameters": true,
     "noUnusedLocals": true,
+    "rootDir": "./src",
     "outDir": "dist",
     "declaration": true,
-    "declarationDir": "types"
+    "declarationDir": "dist"
   },
   "include": ["src"]
 }
