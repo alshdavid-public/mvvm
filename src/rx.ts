@@ -1,4 +1,5 @@
-import { useEffect, useRef, useReducer } from "preact/hooks";
+import { useEffect, useRef, useReducer, useContext, useState } from "preact/hooks";
+import { createContext } from "preact";
 
 const ON_CHANGE = Symbol("ON_CHANGE");
 
@@ -420,4 +421,70 @@ export function useReactive<T extends object>(instance: T): T {
   }, [instance]);
 
   return instance;
+}
+
+
+export const InjectContext = createContext<Provider>(
+  // @ts-expect-error
+  null,
+);
+
+export class Provider extends Map<any, any> {
+  static Provider = InjectContext.Provider;
+
+  provide(token: any, value: any) {
+    this.set(token, value);
+  }
+}
+
+export function useInjectContext(): Provider {
+  return useContext(InjectContext);
+}
+
+export function useInject<C extends new (...args: any[]) => any>(
+  key: C,
+): InstanceType<C>;
+export function useInject<T>(key: any): T;
+export function useInject<T extends unknown>(key: any): T {
+  const target = useContext(InjectContext).get(key);
+  if (!target) {
+    try {
+      throw new Error(`[PROVIDER] Nothing provided for ${key}`);
+    } catch (error) {
+      throw new Error(`[PROVIDER] Nothing provided for |failed to parse|`);
+    }
+  }
+
+  return target;
+}
+
+interface Unsubscribable {
+  unsubscribe(): void;
+}
+
+interface Observer<T> {
+  next: (value: T) => void;
+}
+
+interface Subscribable<T> {
+  subscribe(observer: Observer<T>): Unsubscribable;
+}
+
+interface BehaviorLike<T> extends Subscribable<T> {
+  getValue(): T;
+}
+
+export function useAsync<T>(x: BehaviorLike<T>): T;
+export function useAsync<T>(x: Subscribable<T>, defaultValue: T): T;
+export function useAsync<T>(x: Subscribable<T> | BehaviorLike<T>, defaultValue?: T): T {
+  const [v, setV] = useState<T>(() =>
+    "getValue" in x ? x.getValue() : (defaultValue as T)
+  );
+
+  useEffect(() => {
+    const s = x.subscribe({ next: (value) => setV(() => value) });
+    return () => s.unsubscribe();
+  }, [x]);
+
+  return v;
 }
