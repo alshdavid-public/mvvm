@@ -1,5 +1,5 @@
 import { useEffect, useRef, useReducer, useContext, useState } from "preact/hooks";
-import { createContext } from "preact";
+import { h, render, createContext } from "preact";
 const ON_CHANGE = Symbol("ON_CHANGE");
 export class Reactive {
     #subscriptions = new Set();
@@ -348,3 +348,107 @@ export function useAsync(x, defaultValue) {
     }, [x]);
     return v;
 }
+export class Router {
+    #routes = [];
+    path(pattern, handler) {
+        this.#routes.push({
+            pattern: new URLPattern({ pathname: pattern }),
+            handler,
+        });
+    }
+    #resolve(url) {
+        for (const { pattern, handler } of this.#routes) {
+            const match = pattern.exec(url);
+            if (!match)
+                continue;
+            const query = Object.fromEntries(new URL(url).searchParams);
+            for (const [key, value] of Object.entries(match.pathname.groups)) {
+                if (value !== undefined)
+                    query[key] = value; // path params win over ?query
+            }
+            return () => handler(query);
+        }
+        return null;
+    }
+    bootstrap() {
+        const controller = new AbortController();
+        navigation.addEventListener("navigate", (event) => {
+            if (!event.canIntercept || event.hashChange || event.downloadRequest !== null)
+                return;
+            const run = this.#resolve(event.destination.url);
+            if (!run)
+                return;
+            event.intercept({
+                handler: async () => {
+                    await run();
+                },
+            });
+        }, { signal: controller.signal });
+        this.#resolve(location.href)?.();
+        return { disconnect: () => controller.abort() };
+    }
+}
+export class PreactApp {
+    #root;
+    #mounted = null;
+    #hasMounted = false;
+    #providers = [];
+    constructor({ root }) {
+        if (!root) {
+            throw new Error('Cannot find root element');
+        }
+        this.#root = root;
+    }
+    use(contextProvider, value) {
+        this.#providers.push((children) => h(contextProvider, { value, children }));
+        if (this.#hasMounted) {
+            this.#render();
+        }
+    }
+    mount(Component) {
+        this.#mounted = typeof Component === "function"
+            ? h(Component, {})
+            : Component;
+        this.#hasMounted = true;
+        this.#render();
+    }
+    #render() {
+        let app = this.#mounted;
+        for (const wrap of this.#providers.toReversed()) {
+            app = wrap(app);
+        }
+        render(app, this.#root);
+    }
+}
+export const ROUTER_PARAMS = Symbol("ROUTER_PARAMS");
+export class PreactRouter {
+    #app;
+    #router;
+    #provider;
+    constructor({ root }) {
+        const provider = new Provider();
+        provider.set(ROUTER_PARAMS, {});
+        this.#app = new PreactApp({ root });
+        this.#app.use(Provider.Provider, provider);
+        this.#router = new Router();
+        this.#provider = provider;
+    }
+    inject(key, value) {
+        this.#provider.set(key, value);
+    }
+    path(path, handler) {
+        this.#router.path(path, (query) => {
+            this.#provider.set(ROUTER_PARAMS, query);
+            handler({
+                mount: (c) => this.#app.mount(c),
+                unmount: () => this.#app.mount(null)
+            });
+        });
+    }
+    bootstrap() {
+        this.#router.bootstrap();
+    }
+}
+export const useRouteParams = () => {
+    return useInject(ROUTER_PARAMS);
+};

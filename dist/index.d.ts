@@ -1,3 +1,4 @@
+import { type ComponentChild, type ComponentType, type ContainerNode } from "preact";
 type Callback = () => unknown;
 export declare class Reactive {
     #private;
@@ -45,4 +46,41 @@ interface BehaviorLike<T> extends Subscribable<T> {
 }
 export declare function useAsync<T>(x: BehaviorLike<T>): T;
 export declare function useAsync<T>(x: Subscribable<T>, defaultValue: T): T;
+type Query = Record<string, string>;
+type Handler = (query: Query) => unknown | Promise<unknown>;
+export declare class Router {
+    #private;
+    path(pattern: string, handler: Handler): void;
+    bootstrap(): {
+        disconnect: () => void;
+    };
+}
+export type PreactAppOptions = {
+    root?: ContainerNode | null;
+};
+export declare class PreactApp {
+    #private;
+    constructor({ root }: PreactAppOptions);
+    use<Props extends {
+        value: unknown;
+        children?: ComponentChild;
+    }>(contextProvider: ComponentType<Props>, value: Props["value"]): void;
+    mount(Component: ComponentChild | ComponentType<Record<PropertyKey, never>>): void;
+}
+export declare const ROUTER_PARAMS: unique symbol;
+export type MountContext = {
+    mount: (Component: ComponentChild | ComponentType<Record<PropertyKey, never>>) => void;
+    unmount: () => void;
+};
+export type PreactRouterOptions = {
+    root?: ContainerNode | null;
+};
+export declare class PreactRouter {
+    #private;
+    constructor({ root }: PreactRouterOptions);
+    inject(key: any, value: any): void;
+    path(path: string, handler: (ctx: MountContext) => (any | Promise<any>)): void;
+    bootstrap(): void;
+}
+export declare const useRouteParams: () => Record<string, string>;
 export {};

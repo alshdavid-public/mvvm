@@ -1,5 +1,5 @@
 import { useEffect, useRef, useReducer, useContext, useState } from "preact/hooks";
-import { createContext } from "preact";
+import { h, render, createContext, type ComponentChild, type ComponentType, type ContainerNode } from "preact";
 
 const ON_CHANGE = Symbol("ON_CHANGE");
 
@@ -487,4 +487,160 @@ export function useAsync<T>(x: Subscribable<T> | BehaviorLike<T>, defaultValue?:
   }, [x]);
 
   return v;
+}
+
+type Query = Record<string, string>;
+type Handler = (query: Query) => unknown | Promise<unknown>;
+
+export class Router {
+  #routes: Array<{ pattern: URLPattern; handler: Handler }> = [];
+
+  path(pattern: string, handler: Handler): void {
+    this.#routes.push({
+      pattern: new URLPattern({ pathname: pattern }),
+      handler,
+    });
+  }
+
+  #resolve(url: string): (() => unknown | Promise<unknown>) | null {
+    for (const { pattern, handler } of this.#routes) {
+      const match = pattern.exec(url);
+      if (!match) continue;
+
+      const query: Query = Object.fromEntries(new URL(url).searchParams);
+      for (const [key, value] of Object.entries(match.pathname.groups)) {
+        if (value !== undefined) query[key] = value; // path params win over ?query
+      }
+      return () => handler(query);
+    }
+    return null;
+  }
+
+  bootstrap(): { disconnect: () => void } {
+    const controller = new AbortController();
+
+    navigation.addEventListener(
+      "navigate",
+      (event) => {
+        if (!event.canIntercept || event.hashChange || event.downloadRequest !== null) return;
+
+        const run = this.#resolve(event.destination.url);
+        if (!run) return;
+
+        event.intercept({
+          handler: async () => {
+            await run();
+          },
+        });
+      },
+      { signal: controller.signal }
+    );
+
+    this.#resolve(location.href)?.();
+
+    return { disconnect: () => controller.abort() };
+  }
+}
+
+export type PreactAppOptions = {
+  root?: ContainerNode | null
+}
+
+export class PreactApp {
+  #root: ContainerNode
+  #mounted: ComponentChild = null
+  #hasMounted = false
+  #providers: Array<(children: ComponentChild) => ComponentChild> = []
+
+  constructor({
+    root
+  }: PreactAppOptions) {
+    if (!root) {
+      throw new Error('Cannot find root element')
+    }
+    this.#root = root
+  }
+
+  use<Props extends { value: unknown; children?: ComponentChild }>(
+    contextProvider: ComponentType<Props>,
+    value: Props["value"],
+  ) {
+    this.#providers.push((children) =>
+      h(contextProvider, { value, children } as Props)
+    )
+
+    if (this.#hasMounted) {
+      this.#render()
+    }
+  }
+
+  mount(Component: ComponentChild | ComponentType<Record<PropertyKey, never>>) {
+    this.#mounted = typeof Component === "function"
+      ? h(Component as ComponentType<Record<PropertyKey, never>>, {})
+      : Component
+    this.#hasMounted = true
+    this.#render()
+  }
+
+  #render() {
+    let app = this.#mounted
+
+    for (const wrap of this.#providers.toReversed()) {
+      app = wrap(app)
+    }
+
+    render(app, this.#root)
+  }
+}
+
+export const ROUTER_PARAMS = Symbol("ROUTER_PARAMS")
+
+export type MountContext = {
+  mount: (Component: ComponentChild | ComponentType<Record<PropertyKey, never>>) => void
+  unmount: () => void
+}
+
+export type PreactRouterOptions = {
+  root?: ContainerNode | null
+}
+
+export class PreactRouter {
+  #app: PreactApp
+  #router: Router
+  #provider: Provider
+
+  constructor({
+      root
+  }: PreactRouterOptions) {
+    const provider = new Provider()
+    provider.set(ROUTER_PARAMS, {})
+
+    this.#app = new PreactApp({ root })
+    this.#app.use(Provider.Provider, provider)
+
+    this.#router = new Router()
+    this.#provider = provider;
+  }
+
+  inject(key: any, value: any) {
+    this.#provider.set(key, value)
+  }
+
+  path(path: string, handler: (ctx: MountContext) => (any | Promise<any>)) {
+    this.#router.path(path, (query) => {
+      this.#provider.set(ROUTER_PARAMS, query)
+      handler({
+        mount: (c) => this.#app.mount(c),
+        unmount: () => this.#app.mount(null)
+      })
+    })
+  }
+
+  bootstrap() {
+    this.#router.bootstrap()
+  }
+}
+
+export const useRouteParams = (): Record<string, string> => {
+    return useInject(ROUTER_PARAMS)
 }
